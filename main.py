@@ -40,8 +40,6 @@ def add_item():
     print(imdb.get_jsonObj(response_obj))
     
     
-
-
 def remove_item():
     """prints watchlist with an index. Put in index to delete item from list and return it"""
     prt_list("watchlist")
