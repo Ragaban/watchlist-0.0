@@ -6,9 +6,9 @@
 """
 import requests
 
-def get_respObj(film_show, title, key='k_8udy6r0k'):
-    """Get response obj from imdb api. film_show = "SearchMovie" or "SearchMovie"."""
-    response_obj = requests.get(f'https://imdb-api.com/en/API/{film_show}/{key}/{title}')
+def get_respObj(search_type, title, key='k_8udy6r0k'):
+    """Get response obj from imdb api. search_type = "SearchMovie" or "SearchMovie"."""
+    response_obj = requests.get(f'https://imdb-api.com/en/API/{search_type}/{key}/{title}')
     return response_obj
 
 def get_jsonObj(response_obj) -> dict: # Name is wrong return dict_obj
@@ -18,7 +18,7 @@ def get_jsonObj(response_obj) -> dict: # Name is wrong return dict_obj
 
 
 
-# r = imdb_api.get_respObj(title=title, film_show=f_or_s)
+# r = imdb_api.get_respObj(title=title, search_type=f_or_s)
 # json_obj = imdb_api.get_jsonObj(r)
 # for i in range(len(json_obj['results'])):
 #     print(json_obj['results'][i]['title'] + ' | ' + json_obj['results'][i]['description'])

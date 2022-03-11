@@ -1,5 +1,6 @@
 # watchlist
 import json
+import imdb_api as imdb
 
 def menu():
     """basic menu"""
@@ -14,22 +15,41 @@ def menu():
     return  input()    
 
 def prt_list(chosen_list):
-    """print either watchlist or finished-film-list. chosen_list = 'watchlist'/'watched_list' """
+    """print either watchlist or finished-film-list. chosen_list = 'watchlist'/'watched_list'
+    w/ index and year """
     with open("database.txt", "r") as jsonFile:
         watchlist = json.load(jsonFile)
         for index, item in enumerate(watchlist[chosen_list]):
-            print(index, item['title'])
+            print(index, item['title'], item['description'])
 
 def add_item():
-    pass
+    while True:
+        user_ipt = input("Film(1) or TV(2)?: ")
+        if user_ipt == "1":
+            search_type = "SearchMovie"
+            title = input("What is the title of the Film?: ")
+            break
+        elif user_ipt == "2":
+            search_type = "SearchSeries"
+            title = input("What is the title of the Show?: ")
+            break
+        else:
+            continue
+
+    response_obj = imdb.get_respObj(search_type, title)
+    print(imdb.get_jsonObj(response_obj))
+    
+    
+
 
 def remove_item():
     """prints watchlist with an index. Put in index to delete item from list and return it"""
-    prt_list("watched_list")
-    with open("database.txt", "w") as jsonFile:
+    prt_list("watchlist")
+    with open("database.txt", "r+") as jsonFile:
         watchlist = json.load(jsonFile)
-        
+        type(watchlist)
 
+        
 
 def main():
     running = True
@@ -45,8 +65,9 @@ def main():
             prt_list("watched_list")
         elif user_ipt == "0":
             print("Closing now. Goodbye :)")
-        else:
             return
+        else:
+            continue
     
 if __name__ == "__main__":
     main()
