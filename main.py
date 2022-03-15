@@ -2,8 +2,6 @@
 import json
 import imdb_api as imdb
 
-
-
 def int_input(validate=int) -> int:
     """Takes an int as ipt and validates it with the int() function and except ValueError.""" 
     while True:
@@ -37,12 +35,14 @@ def prt_list(chosen_list) -> None:
 
 def search_imdb(search_type, title) -> dict:
     """looks up imdb with imdb_api module"""
+    #TODO: when no movie can be foound it crashes with TypeError: 'NoneType' object is not iterable
+    #       getting an empty request. Too few search words maybe
     response_obj = imdb.get_respObj(search_type, title)
     return imdb.get_jsonObj(response_obj)
 
 def add_item():
     """adds item from imdb to the list"""
-    # input stuff
+    # user input 
     while True:
         user_ipt = input("Film(1) or TV(2)?: ")
         if user_ipt == "1":
@@ -55,24 +55,28 @@ def add_item():
             break
         else:
             continue
-    #filtering results
-    search_result = search_imdb(search_type, title) 
-    for index, item in enumerate(search_result['results']):
+    # display found matches
+    matches = search_imdb(search_type, title) 
+    for index, item in enumerate(matches['results']):
         print(f"({index}) - {item['title']}, {item['description']}")
+
     #input stuff w/ validating
     while True:
-        ipt = int_input()
-        if -1 <= ipt <= len([search_result['results']])-1: # check if ipt is in range of results:
+        user_ipt = int_input()
+        if -1 <= user_ipt <= len([matches['results']])-1: # check if ipt is in range of results:
             break
         else:
             print("Invalid input. Try again.")
             continue
     
-    chosen_item = search_result['results'][ipt]
+    #filtering and formatting TODO: Ugly af
+    chosen_item = matches['results'][user_ipt]
+    del chosen_item['resultType']
+
     with open("database.txt", "r+") as jsonDB:
         dictDB = json.load(jsonDB)
         dictDB['watchlist'].append(chosen_item)
-        json.dump(dictDB, jsonDB, sort_keys=True, indent=4) # dump with pretty format
+        json.dump(dictDB, jsonDB, sort_keys=True, indent=4)
 
 def remove_item():
     """prints watchlist with an index. Put in index to delete item from list and return it"""
