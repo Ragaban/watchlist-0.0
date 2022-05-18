@@ -1,6 +1,5 @@
 # A watchlist organizer in PySimpleGUI
 import json
-from typing import Dict
 import PySimpleGUI as sg
 from numpy import size
 
