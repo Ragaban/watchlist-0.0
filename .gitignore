@@ -1,2 +1,2 @@
-imdb_api.py
-__pycache__/
+*.txt
+*.json

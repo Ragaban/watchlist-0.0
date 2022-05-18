@@ -1,108 +1,114 @@
-# watchlist
+# A watchlist organizer in PySimpleGUI
 import json
-import imdb_api as imdb
+from typing import Dict
+import PySimpleGUI as sg
+from numpy import size
 
-def int_input(validate=int) -> int:
-    """Takes an int as ipt and validates it with the int() function and except ValueError.""" 
-    while True:
-        ipt = input()
-        try:
-            ipt = int(ipt)
-        except ValueError:
-            print('Invalid input! Try again.')
-            continue
-        return ipt
 
-def menu() -> str:
-    """basic menu"""
-    print(
-        """
-        1. print watchlist
-        2. add item
-        3. remove item
-        4. print finished-films-list
-        0. exit
-    """)
-    return  input()    
+def create_window(layout_name) -> sg.Window:
+    """ Layouts are stored locally else an Error message occurs
+    when reusing a layout while creating a new window.
+    """
 
-def prt_list(chosen_list) -> None:
-    """print either watchlist or finished-film-list. chosen_list = 'watchlist'/'watched_list'
-    w/ index and year """
-    with open("database.txt", "r") as jsonFile:
-        watchlist = json.load(jsonFile)
-        for index, item in enumerate(watchlist[chosen_list]):
-            print(index, item['title'], item['description'])
+    # Layouts
+    main_menu_layout = [
+        [sg.Text(
+            'main menu',
+            justification='center',
+            expand_x=True,
+            key='TEXT')],
+        [sg.Button('watchlist', key='BUTTON_WATCHLIST')],
+        [sg.Button('watched-list', key= 'BUTTON_WATCHED-LIST')],
+        [sg.Button('exit', key= 'BUTTON_EXIT')],
+    ]
 
-def search_imdb(search_type, title) -> dict:
-    """looks up imdb with imdb_api module"""
-    #TODO: when no movie can be foound it crashes with TypeError: 'NoneType' object is not iterable
-    #       getting an empty request. Too few search words maybe
-    response_obj = imdb.get_respObj(search_type, title)
-    return imdb.get_jsonObj(response_obj)
-
-def add_item():
-    """adds item from imdb to the list"""
-    # user input 
-    while True:
-        user_ipt = input("Film(1) or TV(2)?: ")
-        if user_ipt == "1":
-            search_type = "SearchMovie"
-            title = input("What is the title of the film?: ")
-            break
-        elif user_ipt == "2":
-            search_type = "SearchSeries"
-            title = input("What is the title of the series?: ")
-            break
-        else:
-            continue
-    # display found matches
-    matches = search_imdb(search_type, title) 
-    for index, item in enumerate(matches['results']):
-        print(f"({index}) - {item['title']}, {item['description']}")
-
-    #input stuff w/ validating
-    while True:
-        user_ipt = int_input()
-        if -1 <= user_ipt <= len([matches['results']])-1: # check if ipt is in range of results:
-            break
-        else:
-            print("Invalid input. Try again.")
-            continue
+    watchlist_layout = [
+        [sg.Text(
+            'watchlist',
+            justification='center',
+            expand_x=True,
+            key='TEXT',)],
+        [sg.Table(
+            values= table_content,
+            headings= [''],
+            hide_vertical_scroll= True,
+            auto_size_columns= False,
+            max_col_width= 50,
+            def_col_width= 50,
+            num_rows= 35,
+            display_row_numbers= True,
+            text_color= 'Black',
+            background_color= '#F0F0F0',
+            alternating_row_color= '#DDDDDD',
+            enable_click_events= True,
+            right_click_menu= ['', ['Edit', 'Move']], # TODO: maybe make this a var
+            key='WATCHLIST_TABLE')],
+        [sg.Button('Back', key='BUTTON_BACK')],
+    ]
     
-    #filtering and formatting TODO: Ugly af
-    chosen_item = matches['results'][user_ipt]
-    del chosen_item['resultType']
+    layouts = {
+        'main menu': main_menu_layout, 
+        'watchlist': watchlist_layout,
+    }
 
-    with open("database.txt", "r+") as jsonDB:
-        dictDB = json.load(jsonDB)
-        dictDB['watchlist'].append(chosen_item)
-        json.dump(dictDB, jsonDB, sort_keys=True, indent=4)
+    sg.theme('DarkGrey1')
+    sg.set_options(font= 'Franklin 14')
+    title = 'Watchlist'
+    
+    return sg.Window(title, layouts[layout_name], finalize=True)
 
-def remove_item():
-    """prints watchlist with an index. Put in index to delete item from list and return it"""
-    prt_list("watchlist")
-    with open("database.txt", "r+") as jsonFile:
-        watchlist = json.load(jsonFile)
-        type(watchlist)
-        #TODO: Implement removing item
+def load_json() -> dict:
+    with open('database.json') as f:
+        d : dict = json.load(f)
+        return d
+
+def save_to_json(data) -> None:
+    with open('database.json', 'w') as f:
+        json.dump(data, f, indent=4, sort_keys=True)
+
+def main() -> None:
+    """Main Function where all the logic is"""
+    database = load_json()
+    window = create_window('main menu')
+    
+    while True:
+        # main window loop
+        event, values = window.read()
+        if event == sg.WIN_CLOSED or event == 'BUTTON_EXIT':
+            break
         
-def main():
-    running = True
-    while running:
-        user_ipt = menu()
-        if user_ipt == "1":
-            prt_list("watchlist")
-        elif user_ipt == "2":
-            add_item()
-        elif user_ipt == "3":
-            remove_item()
-        elif user_ipt == "4":
-            prt_list("watched_list")
-        elif user_ipt == "0":
-            print("Closing now. Goodbye :)")
-            return
-        else:
-            continue
-    
-if __name__ == "__main__":
+        if event == 'BUTTON_WATCHLIST':
+            for item in database['watchlist']:
+                film_title, description = item['title'], item['description']
+                table_content.append([f' {film_title} | {description} '])
+            window.close()
+            window = create_window('watchlist')
+            
+        if event == 'BUTTON_WATCHED-LIST':
+            for item in database['watched_list']:
+                film_title, description = item['title'], item['description']
+                table_content.append([f' {film_title} | {description} ']) # TODO: seperate those and add headers
+            window.close()
+            window = create_window('watchlist')
+
+        if event == 'BUTTON_BACK':
+            window.close()
+            window = create_window('main menu')
+
+        print(event, values)
+
+    window.close()
+
+
+# variables
+table_content = []
+
+
+
+
+if __name__ == '__main__':
     main()
+
+# TODO: Wenn man ein item in der Liste klickt soll man es andern konnen 
+# auch sollte man ein menu bar einfugen damit man neue items einfugen kann
+# 
