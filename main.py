@@ -1,7 +1,6 @@
 # A watchlist organizer in PySimpleGUI
 import json
 import PySimpleGUI as sg
-from matplotlib.pyplot import table
 from classes import Movie
 
 def create_window() -> sg.Window:
@@ -13,6 +12,9 @@ def create_window() -> sg.Window:
     title = 'Watchlist Organizer'
 
     main_layout = [
+        [
+            sg.Menu(menu_def)
+        ],
         [  # Row 1
             sg.Text(
                 'watchlist organizer',
@@ -26,8 +28,8 @@ def create_window() -> sg.Window:
                 headings= headings_watched,
                 text_color= 'Black',
                 def_col_width= 30,
-                row_height= 25,
-                num_rows= 25,
+                row_height= 20,
+                num_rows= 20,
                 background_color= 'grey',
                 auto_size_columns= False,
                 justification= 'right',
@@ -38,8 +40,8 @@ def create_window() -> sg.Window:
                 headings= headings_not_watched,
                 text_color= 'Black',
                 def_col_width= 30,
-                row_height= 25,
-                num_rows= 25,
+                row_height= 20,
+                num_rows= 20,
                 background_color= 'grey',
                 auto_size_columns= False,
                 justification= 'right',
@@ -132,7 +134,10 @@ def main() -> None:
 
 
 # variables
-font= ('Ariel, 16')
+font= ('Ariel, 12')
+
+menu_def = [['Edit', ['Add', 'Remove']],
+]
 
 table_content_watched = [] # 2d array
 table_content_not_watched = [] # 2d array
