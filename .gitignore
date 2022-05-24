@@ -1,3 +1,4 @@
 *.txt
 __pycache__
 imdb_api.py
+database - Copy.json
