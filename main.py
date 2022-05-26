@@ -5,13 +5,12 @@ import PySimpleGUI as sg
 from classes import Movie
 import imdb_api as imdb
 
-def create_window() -> sg.Window:
+def create_window(title, used_layout, display_values= '') -> sg.Window:
     """ Layouts are stored locally else an Error message occurs
     when reusing a layout while creating a new window.
     """
     sg.theme('DarkGrey1')
     sg.set_options(font= font) 
-    title = 'Watchlist Organizer'
 
     main_layout = [
         [
@@ -62,7 +61,26 @@ def create_window() -> sg.Window:
         ],
     ]
     
-    return sg.Window(title, main_layout, finalize=True)
+    input_popup = [
+        [sg.Radio('Show', "RAD1"), sg.Radio('Movie', "RAD1")], 
+        [sg.Input(key='-INPUT-')],
+        [sg.Button('Cancel'), sg.Push(), sg.Button('Submit')]]
+
+    display_results = [
+        [sg.Table(
+            values= display_values,
+            headings= 'results')]
+
+    ]
+
+
+    layouts = {
+        'main': main_layout,
+        'popup': input_popup,
+        'display': display_results
+        }
+
+    return sg.Window(title, layouts[used_layout], finalize=True)
 
 def load_json() -> dict[list[dict], list[dict]]:
     with open('database.json') as f:
@@ -109,12 +127,8 @@ def move_movie(remove_from, put_in, indx) -> None:
     m = remove_from.pop(indx)
     put_in.append(m)
     
-def get_input() -> Tuple[str, str]:
-    """returned Tuple first value shows if show (True) or movie (False) and second val is name"""
-    popup = sg.Window('Continue?', [
-        [sg.Radio('Show', "RAD1"), sg.Radio('Movie', "RAD1")], 
-        [sg.Input(key='-INPUT-')],
-        [sg.Button('Cancel'), sg.Push(), sg.Button('Submit')]])
+def get_input(popup: sg.Window) -> Tuple[str, str]:
+    """Tuple first value is search type and the second value is search title"""
     while True:
         event, values = popup.read()
         if event == sg.WINDOW_CLOSED or event == 'Cancel':
@@ -135,16 +149,25 @@ def get_input() -> Tuple[str, str]:
     else:
         return 'SearchMovie', values['-INPUT-']
 
-def display_results():
-    # TODO
-    pass
+def fetch_imdb_data(search_type, search_title) -> list:
+    responseObj = imdb.get_respObj(search_title, search_type)
+    search_results = responseObj.json()
+    return search_results['results']
+
+def display_results(win: sg.Window):
+    while True:
+        event, values = win.read()
+        if event == sg.WINDOW_CLOSED:
+            win.close()
+            return
+
 
 def main() -> None:
     """Main Function where all the logic is"""
     database = load_json()
     create_movie_objects(database)
     update_tables()
-    window = create_window()
+    window = create_window('Movie Organizer', 'main')
 
     while True:
         # main window loop
@@ -154,16 +177,11 @@ def main() -> None:
             break
         
         if event == 'Add':
-            ipt = get_input()
-            if ipt == None:
+            search_ipt = get_input(create_window('Search', 'popup'))
+            if search_ipt == None:
                 continue
-            display_results(ipt)
-            
-
-
-
-
-
+            search_results = fetch_imdb_data(search_ipt[0], search_ipt[1])
+            display_win = create_window('Results', 'display', [search_results])
 
 
         if event == 'Move':
@@ -196,27 +214,24 @@ def main() -> None:
 font= ('Ariel, 12')
 
 menu_def = [['File', ['Add']],
-            ['Help', ['right click on item for drop down menu']]
-]  
+            ['Help', ['right click on item for drop down menu']]]  
+
 right_click_menu_1 = ['rc_menu',
-    ['Move', 'Details', '---', 'Remove']
-]
+    ['Move', 'Details', '---', 'Remove']]
+
 right_click_menu_2 = ['rc_menu',
-    ['Move Back', 'Details']
-]
+    ['Move Back', 'Details']]
 
 table_content_watched = [] # 2d array
 table_content_not_watched = [] # 2d array
 
 watchlist : list[Movie] = []
 watched_list : list[Movie]= []
+search_results = ''
 
 headings_watched = ['watched']
 headings_not_watched = ['not watched']
 
+
 if __name__ == '__main__':
     main()
-
-# TODO: Wenn man ein item in der Liste klickt soll man es andern konnen 
-# auch sollte man ein menu bar einfugen damit man neue items einfugen kann
-# 
