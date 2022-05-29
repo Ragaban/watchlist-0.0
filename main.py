@@ -126,8 +126,16 @@ def main() -> None:
             pass
 
         if event == '-MOVE-':
+            if values['-WATCHLIST_TABLE-'] == []:
+                continue
+            index = values['-WATCHLIST_TABLE-'][0]
+            watched_list.append(watchlist.pop(index))
+            fill_tables()
+        if event == 'Add':
             pass
-        
+
+        if event == 'Remove':
+            pass
         print(event, values)
 
     window.close()
