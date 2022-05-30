@@ -69,9 +69,9 @@ def create_window(title, used_layout, display_values= '') -> sg.Window:
     display_results = [
         [sg.Table(
             values= display_values,
-            headings= 'results')]
-
-    ]
+            headings= ['results']
+            )]
+        ]
 
 
     layouts = {
@@ -181,8 +181,8 @@ def main() -> None:
             if search_ipt == None:
                 continue
             search_results = fetch_imdb_data(search_ipt[0], search_ipt[1])
-            display_win = create_window('Results', 'display', [search_results])
-
+            display_results(create_window('Results', 'display', [search_results]))    
+            
 
         if event == 'Move':
             if values['-WATCHLIST_TABLE-'] == []:
