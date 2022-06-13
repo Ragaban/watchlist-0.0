@@ -11,7 +11,7 @@ class Movie:
     image : str
     watch_status = False
     
-    def set_watch_status(self):
+    def set_watch_status_true(self):
         self.watch_status = True
 
     def set_watched_date(self, watched_date: str) -> None:
