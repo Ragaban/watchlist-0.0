@@ -181,7 +181,6 @@ def main() -> None:
             if search_ipt == None:
                 continue
             search_results = fetch_imdb_data(search_ipt[0], search_ipt[1])
-            breakpoint()
             display_win = create_window('Results', 'display', [search_results])
 
 
