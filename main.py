@@ -1,5 +1,6 @@
 # A watchlist organizer in PySimpleGUI
 import json
+from re import M
 from typing import Tuple
 import PySimpleGUI as sg
 from classes import Movie
@@ -69,7 +70,9 @@ def create_window(title, used_layout, display_values= '') -> sg.Window:
     display_results = [
         [sg.Table(
             values= display_values,
-            headings= 'results')]
+            headings= ['results']),
+        sg.Button('Submit', key='-DISPLAY_SUBMIT-')    
+        ]
 
     ]
 
@@ -90,26 +93,17 @@ def save_to_json(data) -> None:
     with open('database.json', 'w') as f:
         json.dump(data, f, indent=4, sort_keys=True)
 
-def create_movie_objects(database) -> None:
-    """fills the 2 lists watchlist/watched_list with Movie Objects respectively"""
-    for item in database['watchlist']:
-        m = Movie(
-            title= item['title'],
-            id= item['id'],
-            description= item['description'],
-            image= item['image'],
-        )
-        watchlist.append(m)
-    for item in database['watched_list']:
-        m = Movie(
-            title= item['title'],
-            id= item['id'],
-            description= item['description'],
-            image= item['image'],
-        )
-        if item.get('watched date') != None: # some items in watched_list dont have a 'watched date'
-            m.set_watched_date(item['watched date'])
-        watched_list.append(m)
+def create_movie_object(movie : dict) -> Movie:
+    m = Movie(
+        title = movie['title'],
+        id = movie['id'],
+        description = movie['description'],
+        image = movie['image'],
+    )
+    if movie.__contains__("watched date"):
+        m.set_watched_date(movie["watched date"])
+        m.set_watch_status()
+    return m
 
 def show_details():
     pass
@@ -150,7 +144,7 @@ def get_input(popup: sg.Window) -> Tuple[str, str]:
         return 'SearchMovie', values['-INPUT-']
 
 def fetch_imdb_data(search_type, search_title) -> list:
-    responseObj = imdb.get_respObj(search_title, search_type)
+    responseObj = imdb.get_respObj(title= search_title, search_type= search_type)
     search_results = responseObj.json()
     return search_results['results']
 
@@ -165,8 +159,14 @@ def display_results(win: sg.Window):
 def main() -> None:
     """Main Function where all the logic is"""
     database = load_json()
-    create_movie_objects(database)
-    update_tables()
+    l = database['watchlist'] + database['watched_list']
+    for movie in l:
+        movObj = create_movie_object(movie)
+        if movObj.watch_status:
+            watched_list.append(movObj)    
+        watchlist.append(movObj)
+
+    update_tables() 
     window = create_window('Movie Organizer', 'main')
 
     while True:
@@ -181,13 +181,14 @@ def main() -> None:
             if search_ipt == None:
                 continue
             search_results = fetch_imdb_data(search_ipt[0], search_ipt[1])
+            breakpoint()
             display_win = create_window('Results', 'display', [search_results])
 
 
         if event == 'Move':
             if values['-WATCHLIST_TABLE-'] == []:
                 continue
-            move_movie(watchlist, watched_list, values['-WATCHLIST_TABLE-'][0])
+            move_movie(watchlist, watched_list, values['-WATCHLIST_TABLE-'][0]) #TODO Move Back does not work and crashed app when clicked again
             update_tables()
             window['-WATCHLIST_TABLE-'].update(table_content_not_watched)
             window['-WATCHED_LIST_TABLE-'].update(table_content_watched)
