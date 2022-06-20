@@ -8,6 +8,7 @@ import imdb_api as imdb
 # vars
 font= ('Ariel, 12')
 
+# vars structures
 menu_def = [['File', ['Add']],
             ['Help', ['right click on item for drop down menu']]]  
 
@@ -17,6 +18,8 @@ right_click_menu_1 = ['rc_menu',
 right_click_menu_2 = ['rc_menu',
     ['Move Back', 'Details']]
 
+
+# vars containers
 watchlist : list[Movie] = []
 watched_list : list[Movie]= []
 
@@ -208,7 +211,7 @@ def main() -> None:
                 # checks if item on list is clicked else it ignores 'Move' and other opt
                 continue
             print(values['-WATCHLIST_TABLE-'][0])
-            move_movie(watchlist, watched_list, values['-WATCHLIST_TABLE-'][0]) #TODO Move Back does not work and crashed app when clicked again
+            move_movie(watchlist, watched_list, values['-WATCHLIST_TABLE-'][0]) #TODO: Move Back does not work and crashed app when clicked again
             
             # window['-WATCHLIST_TABLE-'].update(watchlist)
             # window['-WATCHED_LIST_TABLE-'].update(watched_list)
