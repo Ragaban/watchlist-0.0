@@ -1,19 +1,19 @@
 #classes
-import json
-from dataclasses import dataclass
-from re import M
 
-@dataclass
 class Movie:
-    title : str
-    id : str
-    description : str
-    image : str
-    watch_status = False
+    def __init__(self, title, id, description, image, watched_date = ''):
+        self.title = title 
+        self.id = id 
+        self.description = description
+        self.image = image
+        self.watch_status =  False
+        if watched_date == '':  
+            pass
+        else: 
+            self.watched_date = watched_date
     
-    def set_watch_status_true(self):
+    def watched_it(self):
         self.watch_status = True
-
-    def set_watched_date(self, watched_date: str) -> None:
-        self.watched_date = watched_date
     
+    
+

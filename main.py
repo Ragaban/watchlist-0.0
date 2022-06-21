@@ -1,9 +1,12 @@
 # A watchlist organizer in PySimpleGUI
 import json
-from typing import Tuple
+import requests
 import PySimpleGUI as sg
+
+from requests import Response
+from typing import Tuple
 from classes import Movie
-import imdb_api as imdb
+
 
 # vars
 font= ('Ariel, 12')
@@ -25,22 +28,26 @@ watched_list : list[Movie]= []
 
 table_con_watchlist = []  # structure [[], [], []] 2d array
 table_con_watched_list = []
-search_results = ''
+
+table_con_search_results = []
+
 
 # headings_watched = ['watched']   not needed only one heading is used maybe in the future
 # headings_not_watched = ['not watched']
 
 
 # funcs
-def create_window(title, used_layout, display_values= '') -> sg.Window:
+def create_window(title, used_layout) -> sg.Window:
     """ Layouts are stored locally else an Error message occurs
     when reusing a layout while creating a new window.
     """
+
+    # vars
     sg.theme('DarkGrey1')
     sg.set_options(font= font) 
 
     main_layout = [
-        [
+        [  # Meny Bar
             sg.Menu(menu_def)
         ],
         [  # Row 1
@@ -49,7 +56,7 @@ def create_window(title, used_layout, display_values= '') -> sg.Window:
                 headings= ['watchlist'],
                 text_color= 'Black',
                 def_col_width= 30,
-                row_height= 20,
+                row_height= 20, 
                 num_rows= 20,
                 background_color= 'grey',
                 display_row_numbers= True,
@@ -73,7 +80,7 @@ def create_window(title, used_layout, display_values= '') -> sg.Window:
                 key= '-WATCHED_LIST_TABLE-'
                 ),
         ], 
-        [   # Row 2
+        [  # Row 2
             sg.Push(),
             sg.Button(
                 button_text= 'exit', 
@@ -87,13 +94,24 @@ def create_window(title, used_layout, display_values= '') -> sg.Window:
         [sg.Button('Cancel'), sg.Push(), sg.Button('Submit')]]
 
     display_results = [
-        [sg.Table(
-            values= display_values,
-            headings= ['results']),
-        sg.Button('Submit', key='-DISPLAY_SUBMIT-')    
+        [
+            sg.Table(
+            values= table_con_search_results,
+            headings= ['results'],
+            # text_color= 'Black',
+            # def_col_width= 30,
+            # row_height= 20,
+            # num_rows= 20,
+            # background_color= 'grey',
+            # display_row_numbers= True,
+            # auto_size_columns= False,
+            key='-DISPLAY_RESULTS-')
+        ],
+        [
+            sg.Button('Submit', key='-DISPLAY_SUBMIT-')
         ]
-
     ]
+        
 
     layouts = {
         'main': main_layout,
@@ -104,6 +122,7 @@ def create_window(title, used_layout, display_values= '') -> sg.Window:
     return sg.Window(title, layouts[used_layout], finalize=True)
 
 # funcs before first window is generated
+
 def load_json() -> dict[list[dict], list[dict]]:
     with open('database.json') as f:
         return  json.load(f)
@@ -113,16 +132,22 @@ def save_to_json(data) -> None:
         json.dump(data, f, indent=4, sort_keys=True)
 
 def create_movie_object(movie : dict) -> Movie:
-    m = Movie(
+    if 'watched date' in movie:
+        watched_date = movie['watched date']
+    else:
+        watched_date = ''
+
+    movie_Obj = Movie(
         title = movie['title'],
         id = movie['id'],
         description = movie['description'],
         image = movie['image'],
+        watched_date= watched_date
     )
     if 'watched date' in movie:
-        m.set_watched_date(movie["watched date"])
-        m.set_watch_status_true()
-    return m
+        movie_Obj.watched_it()
+
+    return movie_Obj
 
 # funcs open new windows
 def show_details():
@@ -130,7 +155,8 @@ def show_details():
     # TODO
     pass
 
-def get_input(popup: sg.Window) -> Tuple[str, str]:
+# imdb search
+def get_input(popup : sg.Window) -> Tuple[str, str]:
     """Tuple first value is search type and the second value is search title"""
     while True:
         event, values = popup.read()
@@ -148,37 +174,50 @@ def get_input(popup: sg.Window) -> Tuple[str, str]:
     search_title = values['-INPUT-']
     popup.close()
     if values[0] == True:
-        return 'SearchShow', search_title
+        return 'SearchSeries', search_title
     else:
-        return 'SearchMovie', search_title
+        return 'SearchMvie', search_title
 
-def display_results(win: sg.Window):
+def display_results(win : sg.Window):
     # TODO: display the results of the imdb fetch and let the user pick one of the list
     while True:
         event, values = win.read()
         if event == sg.WINDOW_CLOSED:
             win.close()
             return
+        if values['-WATCHLIST_TABLE-'] == []:
+                # checks if item on list is clicked else it ignores 'Move'
+                continue
+        print(values)
 
-# 
+# imdb shit
+def get_respObj(title, search_type= 'SearchMovie', key= '') -> Response:
+    """gets input from get_input func"""
+    if key == '': # IF KEY NOT GIVEN USES ONE IN FILE imdb_api_key.txt
+        with open('imdb_api_key.txt', 'r') as f:
+            key = f.read()
+    return requests.get(f'https://imdb-api.com/en/API/{search_type}/{key}/{title}')
+
 def fetch_imdb_data(search_type, search_title) -> list:
-    responseObj = imdb.get_respObj(title=search_title, search_type=search_type)
+    responseObj = get_respObj(title=search_title, search_type=search_type)
+    if responseObj.status_code == 404:
+        return []
     search_results = responseObj.json()
     return search_results['results']
 
-def move_movie(remove_from, put_in, indx) -> None:
-    m = remove_from.pop(indx)
+def move_movie(remove_from, put_in, index) -> None:
+    m = remove_from.pop(index)
     put_in.append(m)
 
 
 # MAIN
 def main() -> None:
     """Main Function where all the logic is"""
-    global table_con_watchlist, table_con_watched_list # 
+    global table_con_watchlist, table_con_watched_list , table_con_search_results 
 
-    # some "initializiaton" required before window can be created
+    # some "initializiaton" before window is created
     database = load_json() 
-    _ = database['watchlist'] + database['watched_list']
+    _ = database['watchlist'] + database['watched_list'] # TODO: MAYBE use zip function for this here idk
     for movie in _:
         movObj = create_movie_object(movie)
         if movObj.watch_status: 
@@ -203,27 +242,42 @@ def main() -> None:
             search_ipt = get_input(create_window('Search', 'popup'))
             if search_ipt == None:
                 continue
-            search_results = fetch_imdb_data(search_ipt[0], search_ipt[1])
-            display_win = create_window('Results', 'display', [search_results]) # TODO: look def display_win
-
+            search_results = fetch_imdb_data(search_ipt[0], search_ipt[1]) 
+            table_con_search_results = [[x['title']] for x in search_results]
+            display_results = create_window('Results', 'display')
+        
         if event == 'Move':
             if values['-WATCHLIST_TABLE-'] == []:
-                # checks if item on list is clicked else it ignores 'Move' and other opt
+                # checks if item on list is clicked else it ignores 'Move'
                 continue
-            print(values['-WATCHLIST_TABLE-'][0])
-            move_movie(watchlist, watched_list, values['-WATCHLIST_TABLE-'][0]) #TODO: Move Back does not work and crashed app when clicked again
+            print(values['-WATCHLIST_TABLE-'][0]) # debugging
+
+            index = values['-WATCHLIST_TABLE-'][0]
+            move_movie(watchlist, watched_list, index) 
+
+            table_con_watchlist = [[movie.title] for movie in watchlist]
+            table_con_watched_list = [[movie.title] for movie in watched_list]
+
+            window['-WATCHLIST_TABLE-'].update(table_con_watchlist)
+            window['-WATCHED_LIST_TABLE-'].update(table_con_watched_list)
             
-            # window['-WATCHLIST_TABLE-'].update(watchlist)
-            # window['-WATCHED_LIST_TABLE-'].update(watched_list)
+            window.refresh()
 
         if event == 'Move Back':
             if values['-WATCHED_LIST_TABLE-'] == []:
-                # checks if item on list is clicked else it ignores 'Move Back' and other opt
+                # checks if item on list is clicked else it ignores 'Move Back'
                 continue
+            
+            index = values['-WATCHED_LIST_TABLE-'][0]
+            move_movie(watched_list, watchlist, index)
 
-            # move_movie(watched_list, watchlist, values['-WATCHED_LIST_TABLE-'][0])
-            # window['-WATCHLIST_TABLE-'].update(watchlist)
-            # window['-WATCHED_LIST_TABLE-'].update(watched_list)
+            table_con_watchlist = [[movie.title] for movie in watchlist]
+            table_con_watched_list = [[movie.title] for movie in watched_list]
+
+            window['-WATCHLIST_TABLE-'].update(table_con_watchlist)
+            window['-WATCHED_LIST_TABLE-'].update(table_con_watched_list)
+            
+            window.refresh()
 
         if event == 'Remove':
             pass
