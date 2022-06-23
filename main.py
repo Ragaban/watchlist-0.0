@@ -15,10 +15,10 @@ font= ('Ariel, 12')
 menu_def = [['File', ['Add']],
             ['Help', ['right click on item for drop down menu']]]  
 
-right_click_menu_1 = ['rc_menu',
+right_click_menu_1 = ['rc_menu1',
     ['Move', 'Details', '---', 'Remove']]
 
-right_click_menu_2 = ['rc_menu',
+right_click_menu_2 = ['rc_menu2',
     ['Move Back', 'Details']]
 
 
@@ -47,7 +47,7 @@ def create_window(title, used_layout) -> sg.Window:
     sg.set_options(font= font) 
 
     main_layout = [
-        [  # Meny Bar
+        [  # Menu Bar
             sg.Menu(menu_def)
         ],
         [  # Row 1
@@ -98,18 +98,17 @@ def create_window(title, used_layout) -> sg.Window:
             sg.Table(
             values= table_con_search_results,
             headings= ['results'],
-            # text_color= 'Black',
-            # def_col_width= 30,
-            # row_height= 20,
-            # num_rows= 20,
-            # background_color= 'grey',
-            # display_row_numbers= True,
-            # auto_size_columns= False,
+            text_color= 'Black',
+            def_col_width= 30,
+            row_height= 20, 
+            num_rows= 20,
+            background_color= 'grey',
+            display_row_numbers= True,
+            auto_size_columns= False,
+            justification= 'right',
             key='-DISPLAY_RESULTS-')
         ],
-        [
-            sg.Button('Submit', key='-DISPLAY_SUBMIT-')
-        ]
+        [sg.Button('Cancel'), sg.Push(), sg.Button('Submit')]
     ]
         
 
@@ -156,15 +155,15 @@ def show_details():
     pass
 
 # imdb search
-def get_input(popup : sg.Window) -> Tuple[str, str]:
+def get_input(window : sg.Window) -> Tuple[str, str]:
     """Tuple first value is search type and the second value is search title"""
     while True:
-        event, values = popup.read()
+        event, values = window.read()
         if event == sg.WINDOW_CLOSED or event == 'Cancel':
-            popup.close()
+            window.close()
             return
         if event == 'Submit':
-            # check if text is input and radio
+            # check if input and radio are not empty
             if values['-INPUT-'] == '':
                 continue
             if values[0] == False and values[1] == False:
@@ -172,26 +171,31 @@ def get_input(popup : sg.Window) -> Tuple[str, str]:
                 continue
             break
     search_title = values['-INPUT-']
-    popup.close()
-    if values[0] == True:
+    search_type = values[0]
+    window.close() 
+    if search_type == True: # true Series false Movies
         return 'SearchSeries', search_title
     else:
-        return 'SearchMvie', search_title
+        return 'SearchMovie', search_title
 
-def display_results(win : sg.Window):
+def display_results(window : sg.Window) -> int:
     # TODO: display the results of the imdb fetch and let the user pick one of the list
     while True:
-        event, values = win.read()
-        if event == sg.WINDOW_CLOSED:
-            win.close()
+        event, values = window.read()
+        if event == sg.WINDOW_CLOSED or event == 'Cancel':
+            window.close()
             return
-        if values['-WATCHLIST_TABLE-'] == []:
-                # checks if item on list is clicked else it ignores 'Move'
+        if event == 'Submit':
+            if values['-DISPLAY_RESULTS-'] == []:
                 continue
-        print(values)
-
+            break
+        print(event, values)
+    index = values['-DISPLAY_RESULTS-'][0]
+    window.close()
+    return index
+     
 # imdb shit
-def get_respObj(title, search_type= 'SearchMovie', key= '') -> Response:
+def get_respObj(title, search_type, key= '') -> Response:
     """gets input from get_input func"""
     if key == '': # IF KEY NOT GIVEN USES ONE IN FILE imdb_api_key.txt
         with open('imdb_api_key.txt', 'r') as f:
@@ -199,7 +203,7 @@ def get_respObj(title, search_type= 'SearchMovie', key= '') -> Response:
     return requests.get(f'https://imdb-api.com/en/API/{search_type}/{key}/{title}')
 
 def fetch_imdb_data(search_type, search_title) -> list:
-    responseObj = get_respObj(title=search_title, search_type=search_type)
+    responseObj = get_respObj(search_type=search_type, title=search_title)
     if responseObj.status_code == 404:
         return []
     search_results = responseObj.json()
@@ -215,9 +219,9 @@ def main() -> None:
     """Main Function where all the logic is"""
     global table_con_watchlist, table_con_watched_list , table_con_search_results 
 
-    # some "initializiaton" before window is created
+    # Create Movie() instances from db.
     database = load_json() 
-    _ = database['watchlist'] + database['watched_list'] # TODO: MAYBE use zip function for this here idk
+    _ = database['watchlist'] + database['watched_list'] # OPTIONAL TODO: MAYBE use zip function for this here idk
     for movie in _:
         movObj = create_movie_object(movie)
         if movObj.watch_status: 
@@ -239,13 +243,20 @@ def main() -> None:
         
         # Add opens another window to take the tile and type of the movie
         if event == 'Add':
-            search_ipt = get_input(create_window('Search', 'popup'))
-            if search_ipt == None:
+            search_output= get_input(create_window('Search', 'popup'))
+            if search_output == None:
                 continue
-            search_results = fetch_imdb_data(search_ipt[0], search_ipt[1]) 
-            table_con_search_results = [[x['title']] for x in search_results]
-            display_results = create_window('Results', 'display')
-        
+            search_type, search_title = search_output
+            search_results = fetch_imdb_data(search_type, search_title) 
+            table_con_search_results = [[x['title'] + ', ' + x['description']] for x in search_results]
+            select_items_idx = display_results(create_window('Results', 'display'))
+            if select_items_idx == None:
+                continue
+            else:
+                index = select_items_idx
+                print(search_results[index])
+                #TODO:
+
         if event == 'Move':
             if values['-WATCHLIST_TABLE-'] == []:
                 # checks if item on list is clicked else it ignores 'Move'
