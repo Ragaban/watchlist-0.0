@@ -85,8 +85,8 @@ def create_window(title, used_layout, details_text='') -> sg.Window:
             sg.Input(key= '-MAIN-INPUT-'),
             sg.Push(),
             sg.Button(
-                button_text= 'exit', 
-                key= '-EXIT-')
+                button_text= 'Exit&Save', 
+                key= '-EXITSAVE-')
         ],
     ]
     
@@ -231,7 +231,7 @@ def update_tables(table_con_watchlist, table_con_watched_list, window):
 def main() -> None:
     """Main Function where all the logic is"""
     global table_con_watchlist, table_con_watched_list , table_con_search_matches 
-
+    
     # Create Movie() instances from db.
     database = load_json() 
     for movie in database['watchlist']:
@@ -243,7 +243,7 @@ def main() -> None:
         watched_list.append(movie_object)
     # list comprehension form -> [watched_list.append(create_movie_object(movie)) for movie in database['watchlist']]
 
-    # filling tables with 
+    # filling tables with titles
     table_con_watchlist = [[movie.title] for movie in watchlist]
     table_con_watched_list = [[movie.title] for movie in watched_list]
 
@@ -253,7 +253,19 @@ def main() -> None:
         # main window loop
         event, values = window.read()
         # closing guard
-        if event == sg.WIN_CLOSED or event == '-EXIT-':
+        if event == sg.WIN_CLOSED:
+            break
+        if event == '-EXITSAVE-':
+            save_database = {
+                'watched_list' : [],
+                'watchlist' : []
+            }
+            for item in watched_list:
+                save_database['watched_list'].append(item.__dict__)
+            for item in watchlist:
+                save_database['watchlist'].append(item.__dict__)
+
+            save_to_json(save_database)
             break
         
         # Add opens another window to take the title and type of the movie
@@ -308,16 +320,40 @@ def main() -> None:
             update_tables(table_con_watchlist, table_con_watched_list, window)
 
         if event == 'Remove':
-            pass
-        
+            if values['-WATCHLIST_TABLE-'] == []:
+                # checks if item on list is clicked else it ignores 'Move2'
+                continue            
+            index = values['-WATCHLIST_TABLE-'][0]
+            del table_con_watchlist[index]
+            del watchlist[index]
+            update_tables(table_con_watchlist, table_con_watched_list, window)
+
         if event == 'Details1':
-            index : int= values['-WATCHLIST-'][0]
-            all_attributes = watchlist[index].__dict__.values() # all_attributes is a 'dict_values' class
-            show_details(create_window('Details', 'details', list(all_attributes)))
-        {3:1}.val
-        print(event, values)
+            index : int= values['-WATCHLIST_TABLE-'][0]
+            all_attributes = watchlist[index].__dict__ # all_attributes is a 'dict_values' class
+            # format dict to an str output
+            details_str = ''
+            for items in all_attributes.items():
+                if 'image' == items[0]:
+                    continue
+                details_str += items[0] + ' : ' + items[1] + '\n'
+            show_details(create_window('Details', 'details', details_str))
+
+        if event == 'Details2':
+            index : int= values['-WATCHED_LIST_TABLE-'][0]
+            all_attributes = watched_list[index].__dict__ # all_attributes is a 'dict_values' class
+            # format dict to an str output
+            details_str = ''
+            for items in all_attributes.items():
+                if 'image' == items[0]:
+                    continue
+                details_str += items[0] + ' : ' + items[1] + '\n'
+            show_details(create_window('Details', 'details', details_str))
+
+        print(event, values) # DEBUG
 
     window.close()
+    return
 
 
 if __name__ == '__main__':
