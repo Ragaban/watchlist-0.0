@@ -1,6 +1,6 @@
 certifi>=2022.12.07
 charset-normalizer==2.0.12
-idna==3.3
+idna>=3.7
 PySimpleGUI==4.60.1
 requests>=2.31.00
 urllib3==1.26.9
